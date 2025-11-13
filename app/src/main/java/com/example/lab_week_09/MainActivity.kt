@@ -23,6 +23,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.lab_week_09.ui.theme.*
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,7 +46,8 @@ class MainActivity : ComponentActivity() {
 
 data class Student(var name: String)
 
-// 🔹 App composable handles navigation between screens
+
+// 🔹 Root navigation host
 @Composable
 fun App(navController: NavHostController) {
     NavHost(
@@ -51,22 +55,22 @@ fun App(navController: NavHostController) {
         startDestination = "home"
     ) {
         composable("home") {
-            Home { navController.navigate("resultContent/?listData=$it") }
+            Home { json ->
+                navController.navigate("resultContent/?listData=$json")
+            }
         }
         composable(
             "resultContent/?listData={listData}",
-            arguments = listOf(
-                navArgument("listData") { type = NavType.StringType }
-            )
+            arguments = listOf(navArgument("listData") { type = NavType.StringType })
         ) {
-            ResultContent(
-                it.arguments?.getString("listData").orEmpty()
-            )
+            val json = it.arguments?.getString("listData").orEmpty()
+            ResultContent(json)
         }
     }
 }
 
-// 🔹 Home composable — main screen
+
+// 🔹 Home composable
 @Composable
 fun Home(
     navigateFromHomeToResult: (String) -> Unit
@@ -91,12 +95,20 @@ fun Home(
             }
         },
         navigateFromHomeToResult = {
-            navigateFromHomeToResult(listData.toList().toString())
+            if (listData.isNotEmpty()) {
+                val moshi = Moshi.Builder()
+                    .add(KotlinJsonAdapterFactory())
+                    .build()
+                val adapter = moshi.adapter<List<Student>>(Types.newParameterizedType(List::class.java, Student::class.java))
+                val json = adapter.toJson(listData)
+                navigateFromHomeToResult(json)
+            }
         }
     )
 }
 
-// 🔹 HomeContent composable — handles UI for home screen
+
+// 🔹 HomeContent composable
 @Composable
 fun HomeContent(
     listData: SnapshotStateList<Student>,
@@ -113,31 +125,28 @@ fun HomeContent(
                     .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Title
-                OnBackgroundTitleText(
-                    text = stringResource(id = R.string.enter_item)
-                )
+                OnBackgroundTitleText(text = stringResource(id = R.string.enter_item))
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 TextField(
                     value = inputField.name,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                    onValueChange = { onInputValueChange(it) }
+                    onValueChange = { onInputValueChange(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Student Name") }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row {
-                    PrimaryTextButton(
-                        text = stringResource(id = R.string.button_click)
-                    ) {
-                        onButtonClick()
+                    PrimaryTextButton(text = stringResource(id = R.string.button_click)) {
+                        if (inputField.name.isNotBlank()) {
+                            onButtonClick()
+                        }
                     }
 
-                    PrimaryTextButton(
-                        text = stringResource(id = R.string.button_navigate)
-                    ) {
+                    PrimaryTextButton(text = stringResource(id = R.string.button_navigate)) {
                         navigateFromHomeToResult()
                     }
                 }
@@ -157,18 +166,44 @@ fun HomeContent(
     }
 }
 
-// 🔹 ResultContent composable — second screen showing list result
+
+// 🔹 ResultContent composable
 @Composable
 fun ResultContent(listData: String) {
-    Column(
+    val moshi = remember {
+        Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .build()
+    }
+
+    val adapter = remember {
+        moshi.adapter<List<Student>>(
+            Types.newParameterizedType(List::class.java, Student::class.java)
+        )
+    }
+
+    val studentList = remember(listData) {
+        adapter.fromJson(listData).orEmpty()
+    }
+
+    LazyColumn(
         modifier = Modifier
-            .padding(vertical = 4.dp)
+            .padding(16.dp)
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        OnBackgroundItemText(text = listData)
+        item {
+            OnBackgroundTitleText(text = "Result Content")
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        items(studentList) { student ->
+            OnBackgroundItemText(text = student.name)
+            Spacer(modifier = Modifier.height(4.dp))
+        }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable
