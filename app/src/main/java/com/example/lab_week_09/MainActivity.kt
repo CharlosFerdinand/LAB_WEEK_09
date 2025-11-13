@@ -11,10 +11,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.lab_week_09.ui.theme.LAB_WEEK_09Theme
+import com.example.lab_week_09.ui.theme.OnBackgroundTitleText
+import com.example.lab_week_09.ui.theme.PrimaryTextButton
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,18 +77,29 @@ fun HomeContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {
-            Text(text = "Enter item:")
+            // 🔹 Added custom title text from Elements.kt
+            OnBackgroundTitleText(
+                text = stringResource(id = R.string.enter_item)
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
+
             TextField(
                 value = inputField.name,
                 onValueChange = onInputValueChange,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 modifier = Modifier.fillMaxWidth()
             )
+
             Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = onButtonClick) {
-                Text(text = "Add Student")
+
+            // 🔹 Added custom button from Elements.kt
+            PrimaryTextButton(
+                text = stringResource(id = R.string.button_click)
+            ) {
+                onButtonClick()
             }
+
             Spacer(modifier = Modifier.height(16.dp))
         }
 
